@@ -16,6 +16,67 @@ $(document).ready(function() {
         }
     });
 
+    // Terminal typing animation
+    var $terminalCode = $('#terminal .code-wrapper');
+    if ($terminalCode.length && typeof require === 'function') {
+        try {
+            var builder = require('typewriter');
+
+            // Capture the original lines (text) and the comment spans (html) before clearing.
+            var rawText = $terminalCode.get(0).textContent;
+            var lines = rawText.split('\n').map(function (l) { return l.trim(); });
+
+            $terminalCode.empty();
+
+            // Hide the #web inner content (keeping its box for layout) until typing finishes.
+            var $webContent = $('#web').children().css('opacity', 0);
+            var $learnMore = $('.btn-home').css({ opacity: 0, 'pointer-events': 'none' });
+
+            var typer = builder($terminalCode.get(0))
+                .withAccuracy(100)
+                .withMinimumSpeed(50)
+                .withMaximumSpeed(200)
+                .build();
+
+            function escapeHtml(s) {
+                return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+
+            // Classify each non-empty line and drive the sequence.
+            lines.forEach(function (line) {
+                if (line === '') {
+                    typer.put('\n');
+                } else if (/^#\s/.test(line)) {
+                    // Comment line (e.g. "# Upload using cURL"): appears instantly, preserves styling
+                    typer.put('<span class="code-title">' + escapeHtml(line) + '</span>\n');
+                    typer.wait(100);
+                } else if (line.indexOf('$') === 0 || /^#{2,}/.test(line)) {
+                    // Command line ("$ ...") and progress bar ("#### 100.0%"): typed character by character.
+                    typer.type(escapeHtml(line));
+                    typer.put('\n');
+                    typer.wait(100);
+                } else {
+                    // Result / URL line: appears all at once.
+                    typer.put(escapeHtml(line) + '\n');
+                    typer.wait(100);
+                }
+            });
+
+            // Reveal the web upload section once all typing is complete.
+            typer.wait(0, function () {
+                $webContent.css('opacity', 1);
+                $learnMore.css('pointer-events', '').fadeTo(300, 1);
+            });
+        } catch (e) {
+            $terminalCode.text($terminalCode.get(0).textContent);
+            $('#web').children().css('opacity', 1);
+            $('.btn-home').css({ opacity: 1, 'pointer-events': '' });
+        }    } else {
+        // Typewriter unavailable: reveal the CSS-hidden content so nothing stays blank.
+        $('#terminal .code-wrapper, #web > *').css('opacity', 1);
+        $('.btn-home').css({ opacity: 1, 'pointer-events': '' });    }
+
+
 });
 
 (function() {
@@ -71,6 +132,7 @@ $(document).ready(function() {
 
         var li = $('<li style="clear:both;"/><br/><br/>');
 
+        li.append($('<hr/>'));
         li.append($('<div><div class="upload-progress"><span></span><div class="bar" style="width:0%;">####################################################</div></div><p>Uploading... ' + file.name + '</p></div>'));
         $(li).appendTo($('.queue'));
 
@@ -90,10 +152,10 @@ $(document).ready(function() {
                 if (xhr.status === 200) {
                     var deletionToken = xhr.getResponseHeader('X-Url-Delete').split('/').pop();
                     var url = $('<p></p>').text(xhr.responseText).html();
-                    $(li).html('<a target="_blank" href="' + url + '">' + url + '</a><br/><br/>' +
-                        '<span class="code-title"># Deletion token</span><br/>' + deletionToken + '<hr/>');
+                    $(li).html('<hr/><a target="_blank" href="' + url + '">' + url + '</a><br/><br/>' +
+                        '<span class="code-title"># Deletion token</span><br/>' + deletionToken);
                 } else {
-                    $(li).html('<span>Error (' + xhr.status + ') during upload of file ' + file.name + '</span><hr/>');
+                    $(li).html('<hr/><span>Error (' + xhr.status + ') during upload of file ' + file.name + '</span>');
                 }
 
                 // file uploaded successfully, remove from queue
@@ -119,47 +181,59 @@ $(document).ready(function() {
         xhr.send(file);
     }
 
-    $(document).bind('dragenter', function(event) {
-        event.preventDefault();
-    }).bind('dragover', function(event) {
-        event.preventDefault();
-        // show drop indicator
-        $('#terminal').addClass('dragged');
-        $('#web').addClass('dragged');
-    }).bind('dragleave', function() {
-        $('#terminal').removeClass('dragged');
-        $('#web').removeClass('dragged');
+    // Upload handlers (drag/drop, paste, browse, file input) only make sense on the
+    // home/upload page. Download pages (<body id="download">) contain draggable
+    // elements like the preview image and QR code — binding these there would turn an
+    // accidental image self-drag into a stray PUT. Gate everything behind this check.
+    if ($('body').attr('id') !== 'download' && $('#web').length) {
 
-    }).bind('drop dragdrop', function(event) {
-        var files = event.originalEvent.target.files || event.originalEvent.dataTransfer.files;
+        $(document).bind('dragenter', function(event) {
+            event.preventDefault();
+        }).bind('dragover', function(event) {
+            event.preventDefault();
+            // show drop indicator
+            $('#terminal').addClass('dragged');
+            $('#web').addClass('dragged');
+        }).bind('dragleave', function() {
+            $('#terminal').removeClass('dragged');
+            $('#web').removeClass('dragged');
 
-        $.each(files, function(index, file) {
-            upload(file);
+        }).bind('drop dragdrop', function(event) {
+            $('#terminal').removeClass('dragged');
+            $('#web').removeClass('dragged');
+
+            var files = event.originalEvent.dataTransfer.files;
+
+            $.each(files, function(index, file) {
+                if (file instanceof Blob) {
+                    upload(file);
+                }
+            });
+
+            event.stopPropagation();
+            event.preventDefault();
         });
 
-        event.stopPropagation();
-        event.preventDefault();
-    });
-
-    $(document).bind('paste', function(event) {
-        $.each(event.originalEvent.clipboardData.files, function(index, file) {
-            upload(file);
-        });
-    });
-
-    $('a.browse').on('click', function() {
-        $('input[type=file]').click();
-        return (false);
-    });
-
-
-    $('input[type=file]').on('change', function() {
-        $.each(this.files, function(index, file) {
-            if (file instanceof Blob) {
+        $(document).bind('paste', function(event) {
+            $.each(event.originalEvent.clipboardData.files, function(index, file) {
                 upload(file);
-            }
+            });
         });
-    });
+
+        $('a.browse').on('click', function() {
+            $('input[type=file]').click();
+            return (false);
+        });
+
+        $('input[type=file]').on('change', function() {
+            $.each(this.files, function(index, file) {
+                if (file instanceof Blob) {
+                    upload(file);
+                }
+            });
+        });
+
+    }
 
     $('a#fire-delete').on('click', function(event) {
         event.stopPropagation();
@@ -167,67 +241,83 @@ $(document).ready(function() {
         deleteFile($(this).attr('href'));
     });
 
-    // clipboard
-    if (window.location.href.indexOf('download') > -1 ) {
-
-
-        (function() {
-            var copylinkbtn = document.getElementById('copy-link-btn'),
-                copylink = document.getElementById('copy-link-wrapper'),
-                overlay = document.getElementById('overlay');
-
-            var url = 'http://url';
-            copylinkbtn.addEventListener('click', function() {
-
-                var error = document.getElementsByClassName('error');
-
-                while (error[0]) {
-                    error[0].parentNode.removeChild(error[0]);
+    // Copy-to-clipboard for marked elements.
+    // Mark any element with class "copyable" to make it copyable.
+    // A copy button is injected next to each marked element.
+    (function() {
+        function copyText(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                return navigator.clipboard.writeText(text);
+            }
+            return new Promise(function(resolve, reject) {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.top = '-9999px';
+                document.body.appendChild(ta);
+                ta.focus();
+                ta.select();
+                try {
+                    document.execCommand('copy') ? resolve() : reject();
+                } catch (err) {
+                    reject(err);
+                } finally {
+                    document.body.removeChild(ta);
                 }
+            });
+        }
 
-                document.body.className += ' active';
-
-                copylink.children[1].value = url;
-                copylink.children[1].focus();
-                copylink.children[1].select();
-            }, false);
-
-            overlay.addEventListener('click', function() {
-                document.body.className = '';
-            }, false);
-
-            copylink.children[1].addEventListener('keydown', function(e) {
-
-                var error = document.getElementsByClassName('error');
-
-                while (error[0]) {
-                    error[0].parentNode.removeChild(error[0]);
+        function flash(btn, label, cls) {
+            var original = btn.textContent;
+            btn.textContent = label;
+            if (cls) {
+                btn.classList.add(cls);
+            }
+            setTimeout(function() {
+                btn.textContent = original;
+                if (cls) {
+                    btn.classList.remove(cls);
                 }
+            }, 1500);
+        }
 
-                setTimeout(function() {
+        // Returns the copyable text of a snippet: everything except comment
+        // lines (rendered as .code-title), with surrounding blank lines trimmed.
+        function copyableText(target) {
+            var clone = target.cloneNode(true);
+            var comments = clone.querySelectorAll('.code-title');
+            for (var i = 0; i < comments.length; i++) {
+                comments[i].parentNode.removeChild(comments[i]);
+            }
+            return clone.textContent
+                .split('\n')
+                .map(function(line) { return line.trim(); })
+                .filter(function(line) { return line !== ''; })
+                .join('\n');
+        }
 
-                    if ((e.metaKey || e.ctrlKey) && e.keyCode === 67 && isTextSelected(copylink.children[2])) {
-                        document.body.className = '';
-                    } else if ((e.metaKey || e.ctrlKey) && e.keyCode === 67 && isTextSelected(copylink.children[2]) === false) {
-                        var error = document.createElement('span');
-                        error.className = 'error';
-                        var errortext = document.createTextNode('The link was not copied, make sure the entire text is selected.');
+        var targets = document.querySelectorAll('.copyable');
+        for (var i = 0; i < targets.length; i++) {
+            (function(target) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'copy-cmd-btn';
+                btn.setAttribute('aria-label', 'Copy to clipboard');
+                btn.textContent = 'copy';
 
-                        error.appendChild(errortext);
-                        copylink.appendChild(error);
-                    }
-                }, 100);
+                btn.addEventListener('click', function() {
+                    var text = copyableText(target);
+                    copyText(text).then(function() {
+                        flash(btn, 'copied!', 'copied');
+                    }, function() {
+                        flash(btn, 'error');
+                    });
+                }, false);
 
-                function isTextSelected(input) {
-                    if (typeof input.selectionStart === 'number') {
-                        return input.selectionStart === 0 && input.selectionEnd === input.value.length;
-                    } else if (typeof document.selection !== 'undefined') {
-                        input.focus();
-                        return document.selection.createRange().text === input.value;
-                    }
-                }
-            }, false);
-        })();
-    }
+                var container = target.closest ? target.closest('.code-wrapper') : null;
+                (container || target.parentNode).appendChild(btn);
+            })(targets[i]);
+        }
+    })();
 
 })();

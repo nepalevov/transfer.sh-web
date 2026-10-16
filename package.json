@@ -1,36 +1,37 @@
 {
   "name": "transfer.sh",
   "version": "0.0.0",
+  "scripts": {},
   "dependencies": {
-    "wiredep": "^4.0.0"
+    "animate.less": "^2.2.0",
+    "bootstrap": "^3.4.1",
+    "jquery": "^3.7.1",
+    "urijs": "^1.19.11",
+    "video.js": "^7.21.6"
   },
   "devDependencies": {
-    "grunt": ">=1.0.0",
-    "grunt-concurrent": "~1.0.0",
-    "grunt-contrib-clean": "^2.0.0",
-    "grunt-contrib-concat": "~0.5.0",
-    "grunt-contrib-connect": "^2.0.0",
+    "grunt": "^1.6.3",
+    "grunt-concurrent": "^3.0.0",
+    "grunt-contrib-clean": "^2.0.1",
+    "grunt-contrib-concat": "^2.1.0",
+    "grunt-contrib-connect": "^5.0.1",
     "grunt-contrib-copy": "^1.0.0",
-    "grunt-contrib-cssmin": "^3.0.0",
-    "grunt-contrib-htmlmin": "^3.0.0",
-    "grunt-contrib-imagemin": "^3.1.0",
-    "grunt-contrib-jshint": "^2.1.0",
-    "grunt-contrib-less": "^2.0.0",
-    "grunt-contrib-uglify": "^4.0.1",
+    "grunt-contrib-cssmin": "^5.0.0",
+    "grunt-contrib-htmlmin": "^3.1.0",
+    "grunt-contrib-jshint": "^3.2.0",
+    "grunt-contrib-less": "^3.0.0",
+    "grunt-contrib-uglify": "^5.2.2",
     "grunt-contrib-watch": "^1.1.0",
     "grunt-google-fonts": "^0.5.0",
-    "grunt-include-replace": "^5.0.0",
     "grunt-includes": "^1.1.0",
-    "grunt-npm-command": "^0.1.2",
-    "grunt-rev": "~0.1.0",
-    "grunt-svgmin": "^6.0.0",
-    "grunt-usemin": "^3.1.1",
-    "jshint-stylish": "~1.0.0",
-    "load-grunt-tasks": "^4.0.0",
-    "matchdep": "^2.0.0",
-    "time-grunt": "~1.0.0"
+    "jshint-stylish": "^2.2.1",
+    "load-grunt-tasks": "^5.1.0",
+    "time-grunt": "^2.0.0"
+  },
+  "overrides": {
+    "form-data": "^4.0.4"
   },
   "engines": {
-    "node": "^10.22.1"
+    "node": ">=10.22.1"
   }
 }

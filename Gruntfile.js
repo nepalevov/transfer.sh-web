@@ -12,11 +12,9 @@ module.exports = function (grunt) {
     // show elapsed time at the end
     require('time-grunt')(grunt);
 
-    grunt.loadNpmTasks('grunt-npm-command');
-
     // configurable paths
     var yeomanConfig = {
-        app: require('./bower.json').appPath || 'src',
+        app: 'src',
         dist: 'dist/'
     };
 
@@ -51,9 +49,13 @@ module.exports = function (grunt) {
             gruntfile: {
                 files: ['Gruntfile.js']
             },
+            scripts: {
+                files: ['<%= yeoman.app %>/scripts/{,*/}*.js'],
+                tasks: ['concat']
+            },
             includes: {
-                files: ['<%= yeoman.app %>/*.html', '.tmp/*.html'],
-                tasks: ['includes:server']
+                files: ['<%= yeoman.app %>/*.html', '<%= yeoman.app %>/snippets/*'],
+                tasks: ['includes:server', 'snippets:server']
             },
             livereload: {
                 options: {
@@ -65,7 +67,7 @@ module.exports = function (grunt) {
                     '{.tmp,<%= yeoman.app %>}/scripts/{,*/}*.js',
                     '<%= yeoman.app %>/images/{,*/}*.{png,jpg,jpeg,gif,webp,svg}'
                 ],
-                tasks: ['includes:server']
+                tasks: ['includes:server', 'snippets:server']
             }
         },
         connect: {
@@ -80,7 +82,9 @@ module.exports = function (grunt) {
                     open: true,
                     base: [
                         '.tmp',
-                        '<%= yeoman.app %>'
+                        '<%= yeoman.app %>',
+                        '<%= yeoman.dist %>',
+                        '.'
                     ]
                 }
             },
@@ -167,21 +171,21 @@ module.exports = function (grunt) {
                     {
                         dest: '.tmp/scripts/main.js',
                         src: [
-                            '<%= yeoman.app %>/bower_components/jquery/dist/jquery.js',
-                            '<%= yeoman.app %>/bower_components/uri.js/src/URI.min.js',
-                            '<%= yeoman.app %>/bower_components/bootstrap/js/transition.js',
-                            '<%= yeoman.app %>/bower_components/bootstrap/js/collapse.js',
-                            '<%= yeoman.app %>/scripts/showdown.js',
+                            'node_modules/jquery/dist/jquery.js',
+                            'node_modules/urijs/src/URI.min.js',
+                            'node_modules/bootstrap/js/transition.js',
+                            'node_modules/bootstrap/js/collapse.js',
+                            '<%= yeoman.app %>/scripts/typewriter-bundle.js',
                             '<%= yeoman.app %>/scripts/base.js'
                         ]
                     },
                     {
                         dest: '.tmp/scripts/vendor/modernizr.js',
-                        src: ['<%= yeoman.app %>/bower_components/modernizr/modernizr.js']
+                        src: ['<%= yeoman.app %>/scripts/vendor/modernizr.js']
                     },
                     {
                         dest: '.tmp/scripts/vendor/video.js',
-                        src: ['<%= yeoman.app %>/bower_components/videojs/dist/video.js']
+                        src: ['node_modules/video.js/dist/video.js']
                     }
                 ]
             }
@@ -208,29 +212,6 @@ module.exports = function (grunt) {
                 ]
             }
         },
-        rev: {
-            dist: {
-                files: {
-                    src: [
-                        '<%= yeoman.dist %>/scripts/{,*/}*.js',
-                        '<%= yeoman.dist %>/styles/{,*/}*.css',
-                        '<%= yeoman.dist %>/images/{,*/}*.{png,jpg,jpeg,gif,webp,svg}',
-                        '<%= yeoman.dist %>/fonts/{,*/}*.*'
-                    ]
-                }
-            }
-        },
-        imagemin: {
-            dist: {
-                files: [{
-                    expand: true,
-                    cwd: '<%= yeoman.app %>/images',
-                    src: '{,*/}*.{png,jpg,jpeg}',
-                    dest: '<%= yeoman.dist %>/images'
-                }]
-            }
-        },
-
         cssmin: {
             dist: {
                 files: {
@@ -262,27 +243,6 @@ module.exports = function (grunt) {
                 }]
             }
         },
-        'npm-command': {
-            'videojs-update': {
-                options: {
-                    cmd: 'update',
-                    cwd: '<%= yeoman.app %>/bower_components/videojs/'
-                }
-            },
-            'videojs-install': {
-                options: {
-                    cmd: 'install',
-                    cwd: '<%= yeoman.app %>/bower_components/videojs/'
-                }
-            },
-            'videojs-build': {
-                options: {
-                    cmd: 'run-script',
-                    args: ['build'],
-                    cwd: '<%= yeoman.app %>/bower_components/videojs/'
-                }
-            }
-        },
         copy: {
             dist: {
                 files: [{
@@ -299,35 +259,30 @@ module.exports = function (grunt) {
                         'images/{,*/}*.{webp,gif,svg}'
                     ]
                 }]
-            },
-            server: {
-                files: [{
-                    expand: true,
-                    dot: true,
-                    cwd: '<%= yeoman.app %>/bower_components/font-awesome/fonts/',
-                    dest: '<%= yeoman.app %>/fonts/font-awesome',
-                    src: ['*']
-                }, {
-                    expand: true,
-                    dot: true,
-                    cwd: '<%= yeoman.app %>/bower_components/bootstrap/dist/fonts/',
-                    dest: '<%= yeoman.app %>/fonts/glyphicons',
-                    src: ['*']
-                }]
             }
         },
         concurrent: {
             dist: [
                 'less',
-                'imagemin',
                 'htmlmin'
             ]
         }
     });
 
-    grunt.loadNpmTasks('grunt-npm-command');
     grunt.loadNpmTasks('grunt-google-fonts');
 
+    grunt.registerTask('snippets', 'Insert escaped plain-text code snippets.', function (target) {
+        var renderSnippets = require('./lib/snippets');
+        var path = require('path');
+        var output = target === 'server' ? '.tmp' : yeomanConfig.dist;
+
+        grunt.file.expand({ cwd: output }, '*.html').forEach(function (name) {
+            var file = path.join(output, name);
+            grunt.file.write(file, renderSnippets(grunt.file.read(file), function (snippet) {
+                return grunt.file.read(path.join(yeomanConfig.app, 'snippets', snippet));
+            }));
+        });
+    });
 
     grunt.registerTask('serve', function (target) {
         if (target === 'dist') {
@@ -338,8 +293,9 @@ module.exports = function (grunt) {
             'clean:server',
             'googlefonts',
             'less',
+            'concat',
             'includes:server',
-            'copy:server',
+            'snippets:server',
             'connect:livereload',
             'watch'
         ]);
@@ -353,19 +309,17 @@ module.exports = function (grunt) {
     grunt.registerTask('test', [
         'clean:server',
         'less',
-        'copy:server',
         'connect:test'
     ]);
 
     grunt.registerTask('build', [
         'clean:dist',
         'googlefonts',
-        'npm-command',
-        'copy:server',
         'concurrent',
         'cssmin',
         'concat',
         'includes:build',
+        'snippets:build',
         'uglify',
         'copy'
     ]);

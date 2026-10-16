@@ -40,13 +40,49 @@
         font-family: @font-family-mono;
     }
     .code-wrapper {
+        display: block;
+        position: relative;
         white-space: pre-line;
+    }
+    .code-snippet {
+        display: block;
+        white-space: pre-wrap;
     }
     font-family: @font-family-mono;
 
     text-align: left;
     color: #fff;
     .transition(all @animation-duration ease);
+}
+
+.terminal {
+    position: relative;
+}
+
+.copy-cmd-btn {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    z-index: 2;
+    border: 0;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-family: @font-family-mono;
+    line-height: 1.4;
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    cursor: pointer;
+    opacity: 0.9;
+    .transition(all 0.2s ease);
+    &:hover {
+        opacity: 1;
+        background-color: rgba(255, 255, 255, 0.45);
+    }
+    &.copied {
+        color: @red;
+        opacity: 1;
+    }
 }
 
 
@@ -62,6 +98,12 @@
         padding: 5px 10px;
         font-size: 14px;
         border-color: #fff;
+        color: #fff;
+        &:hover {
+            border-color: #fff;
+            color: @dark-blue;
+            background: #fff;
+        }
     }
     .queue {
         margin: 0;
@@ -71,11 +113,18 @@
     a {
         color: #fff;
     }
+    input {
+        color: @dark-blue;
+    }
       .border-bottom-radius (5px);
 
+    &.dragged {
+        background: lighten(@dark-blue, 5%);
+    }
 }
- .dragged {
-        background: lighten(@dark-blue, 5%)!important;
+
+#from-terminal.uploading > #terminal {
+    display: none;
 }
 
 .terminal {
@@ -90,6 +139,10 @@
  //   background: url(../images/terminal.svg);
     background-repeat: no-repeat;
     background-size: cover;
+
+    &.dragged {
+        background: lighten(@dark-blue, 5%);
+    }
 }
 
 .terminal-top {

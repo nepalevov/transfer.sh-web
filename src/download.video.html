@@ -12,7 +12,7 @@ include "includes/download-head.html"
 <script src="../scripts/vendor/video.js"></script>
 
 include "includes/ga.html"
-include "includes/download-navigation.html"
+include "includes/navigation.html"
 
 <section id="home">
     <div class="wrapper">
@@ -28,7 +28,7 @@ include "includes/download-navigation.html"
                     <video id="video-player"
                            class="video-js vjs-default-skin"
                            controls
-                           preload="auto"
+                           preload="metadata"
                            data-setup='{}'>
                         <source src="{{.URL}}" type="{{.ContentType}}"></source>
                     </video>
@@ -44,7 +44,7 @@ include "includes/download-navigation.html"
 
 </section>
 
-include "includes/download-footer.html"
+include "includes/footer.html"
 include "includes/download-js.html"
 
 </body>

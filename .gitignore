@@ -8,7 +8,6 @@ bin/
 .tmp
 .vagrant
 
-bower_components/
 node_modules/
 
 letsencrypt.cache
